@@ -1,4 +1,5 @@
 fastapi
+PyPDF2
 uvicorn
 sqlalchemy
 psycopg2-binary
@@ -11,13 +12,9 @@ sentence-transformers
 pymupdf
 tiktoken
 openai
-streamlit
-streamlit
-streamlit-option-menu
-streamlit-extras
-streamlit-lottie
-streamlit-authenticator
-streamlit-pdf-viewer
-streamlit-shadcn-ui
-streamlit-javascript
-streamlit-float
+python-dotenv
+chromadb
+docling
+qdrant-client
+psycopg2
+python-dotenv
