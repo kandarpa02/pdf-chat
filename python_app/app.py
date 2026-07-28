@@ -1,5 +1,5 @@
-from dotenv import load_dotenv
-load_dotenv()
+import os
+import time
 
 from fastapi import FastAPI, UploadFile, File, Form
 import tempfile
@@ -8,6 +8,7 @@ import os
 from .database import QdrantDatabase
 from .inference import InferenceAPI
 from .rag_pipeline import RAGPipeline
+from .config import CHAT_MODEL
 
 app = FastAPI()
 
@@ -51,4 +52,52 @@ async def chat(
 
     return {
         "answer": answer
+    }
+
+from pydantic import BaseModel
+
+class Message(BaseModel):
+    role: str
+    content: str
+
+class ChatRequest(BaseModel):
+    model: str
+    messages: list[Message]
+
+@app.post("/v1/chat/completions")
+async def chat_completion(request: ChatRequest):
+
+    question = request.messages[-1].content
+
+    answer = rag.ask(question)
+
+    return {
+        "id": "chatcmpl-1",
+        "object": "chat.completion",
+        "created": int(time.time()),
+        "model": CHAT_MODEL,
+        "choices": [
+            {
+                "index": 0,
+                "message": {
+                    "role": "assistant",
+                    "content": answer,
+                },
+                "finish_reason": "stop",
+            }
+        ],
+    }
+
+
+@app.get("/v1/models")
+def models():
+    return {
+        "object": "list",
+        "data": [
+            {
+                "id": "pdf-chat",
+                "object": "model",
+                "owned_by": "kandarpa sarkar"
+            }
+        ]
     }

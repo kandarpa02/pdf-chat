@@ -3,17 +3,17 @@ import psycopg2
 from psycopg2.extras import Json
 from qdrant_client import QdrantClient
 from qdrant_client.models import PointStruct, VectorParams, Distance
-from .config import settings
+from .config import POSTGRES_HOST, POSTGRES_DB, POSTGRES_PORT, POSTGRES_PASSWORD, POSTGRES_USER
 
 class PostgreSQLDatabase:
 
     def __init__(self):
         self.conn = psycopg2.connect(
-            host=settings.POSTGRES_HOST,
-            port=settings.POSTGRES_PORT,
-            database=settings.POSTGRES_DB,
-            user=settings.POSTGRES_USER,
-            password=settings.POSTGRES_PASSWORD,
+            host=POSTGRES_HOST,
+            port=POSTGRES_PORT,
+            database=POSTGRES_DB,
+            user=POSTGRES_USER,
+            password=POSTGRES_PASSWORD,
         )
 
     def execute(self, query, params=None):
