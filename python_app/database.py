@@ -33,17 +33,39 @@ class PostgreSQLDatabase:
 
     def close(self):
         self.conn.close()
+import uuid
+
+from qdrant_client import QdrantClient
+from qdrant_client.models import (
+    PointStruct,
+    VectorParams,
+    Distance,
+)
 
 
 class QdrantDatabase:
-    def __init__(self, host="localhost", port=6333):
-        self.client = QdrantClient(host=host, port=port)
 
-    def create_collection(self, name: str, vector_size: int):
-        collections = self.client.get_collections().collections
-        existing = [c.name for c in collections]
+    def __init__(self, host, port):
+        self.client = QdrantClient(
+            host=host,
+            port=port,
+        )
 
-        if name not in existing:
+        print(
+            "Connected to Qdrant:",
+            host,
+            port
+        )
+
+
+    def create_collection(
+        self,
+        name,
+        vector_size,
+    ):
+
+        if not self.client.collection_exists(name):
+
             self.client.create_collection(
                 collection_name=name,
                 vectors_config=VectorParams(
@@ -52,57 +74,54 @@ class QdrantDatabase:
                 ),
             )
 
-    def upload_embedding(
+            print(
+                f"Created collection: {name}"
+            )
+
+        else:
+
+            print(
+                f"Collection already exists: {name}"
+            )
+
+
+    def insert(
         self,
-        collection_name: str,
-        point_id,
+        collection_name,
         embedding,
-        payload: dict,
+        payload,
     ):
+
         self.client.upsert(
             collection_name=collection_name,
             points=[
                 PointStruct(
-                    id=point_id,
+                    id=str(uuid.uuid4()),
                     vector=embedding,
                     payload=payload,
                 )
             ],
         )
 
-class RAGDatabase:
 
-    def __init__(self, postgres, qdrant):
-        self.pg = postgres
-        self.qdrant = qdrant
-
-    def save_document(
+    def search(
         self,
         collection_name,
         embedding,
-        text,
-        metadata,
+        limit=5,
     ):
-        document_id = str(uuid.uuid4())
 
-        # PostgreSQL
-        self.pg.execute(
-            """
-            INSERT INTO documents(id, text, metadata)
-            VALUES (%s, %s, %s)
-            """,
-            (
-                document_id,
-                text,
-                Json(metadata),
-            ),
-        )
+        if not self.client.collection_exists(collection_name):
+            raise Exception(
+                f"Collection '{collection_name}' does not exist"
+            )
 
-        self.qdrant.upload_embedding(
+
+        result = self.client.query_points(
             collection_name=collection_name,
-            point_id=document_id,
-            embedding=embedding,
-            payload=metadata,
+            query=embedding,
+            limit=limit,
+            with_payload=True,
         )
 
-        return document_id
+        return result.points

@@ -1,8 +1,18 @@
 version: "3.8"
 
 services:
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: qdrant
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - qdrant_storage:/qdrant/storage
+    restart: unless-stopped
+
   open-webui:
-    image: ghcr.io/open-webui/open-webui:main
+    image: ghcr.io/open-webui/open-webui:latest
     container_name: open-webui
     ports:
       - "3000:8080"
@@ -11,4 +21,5 @@ services:
     restart: unless-stopped
 
 volumes:
+  qdrant_storage:
   open-webui:
