@@ -8,3 +8,5 @@ qdrant-client>=1.10
 sentence-transformers>=3.0
 pymupdf>=1.24
 numpy>=1.26
+streamlit[pdf]>=1.60.0,<2.0.0
+requests>=2.32.0,<3.0.0
