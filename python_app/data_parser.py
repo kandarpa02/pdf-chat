@@ -1,54 +1,63 @@
+from dataclasses import dataclass
+from pathlib import Path
+
 import fitz
 
 
-class ScannedPDFError(Exception):
-    """Raised when the uploaded PDF appears to be image-only."""
-    pass
+class PDFError(ValueError):
+    """Base exception for invalid or unreadable PDFs."""
 
 
-def validate_digital_pdf(
+class ScannedPDFError(PDFError):
+    """Raised when a PDF appears to be image-only."""
+
+
+@dataclass(frozen=True)
+class ParsedPage:
+    page_number: int
+    text: str
+
+
+def validate_pdf_path(pdf_path: str) -> None:
+    path = Path(pdf_path)
+    if path.suffix.lower() != ".pdf":
+        raise PDFError("Only PDF files are supported.")
+    if not path.is_file():
+        raise PDFError("The uploaded PDF could not be found.")
+
+
+def parse_pdf_pages(
     pdf_path: str,
-    min_chars_per_page: int = 30,
-    min_text_pages: int = 1,
-) -> None:
-    """
-    Raises ScannedPDFError if the PDF appears to be scanned/image-only.
-    """
+    min_chars_per_text_page: int = 30,
+) -> list[ParsedPage]:
+    """Extract text page-by-page and reject encrypted or image-only PDFs."""
+    validate_pdf_path(pdf_path)
 
-    text_pages = 0
+    try:
+        with fitz.open(pdf_path) as doc:
+            if doc.needs_pass:
+                raise PDFError("Password-protected PDFs are not supported.")
 
-    with fitz.open(pdf_path) as doc:
-        for page in doc:
-            if len(page.get_text()) >= min_chars_per_page:
-                text_pages += 1
+            pages = [
+                ParsedPage(page_number=index + 1, text=page.get_text("text").strip())
+                for index, page in enumerate(doc)
+            ]
+    except PDFError:
+        raise
+    except Exception as exc:
+        raise PDFError(f"Could not read this PDF: {exc}") from exc
 
-                # Early exit
-                if text_pages >= min_text_pages:
-                    return
+    if not pages:
+        raise PDFError("The PDF contains no pages.")
 
-    raise ScannedPDFError(
-        "This PDF appears to contain little or no embedded text and is likely scanned or image-only."
-    )
+    if not any(len(page.text) >= min_chars_per_text_page for page in pages):
+        raise ScannedPDFError(
+            "This PDF contains little or no embedded text and appears to be scanned or image-only."
+        )
+
+    return pages
 
 
 def parse_pdf(pdf_path: str) -> str:
-    """
-    Validates that the PDF contains embedded text and returns the
-    extracted text as a single string.
-
-    Args:
-        pdf_path: Path to the PDF.
-
-    Returns:
-        Full extracted text.
-
-    Raises:
-        ScannedPDFError: If the PDF is scanned/image-only.
-    """
-
-    validate_digital_pdf(pdf_path)
-
-    with fitz.open(pdf_path) as doc:
-        text = "\n".join(page.get_text() for page in doc)
-
-    return text
+    """Backward-compatible helper returning all extracted text."""
+    return "\n\n".join(page.text for page in parse_pdf_pages(pdf_path) if page.text)

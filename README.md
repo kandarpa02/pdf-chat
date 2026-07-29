@@ -1,1 +1,1 @@
-# pdf-chat
+# PDF Chat
