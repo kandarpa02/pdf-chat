@@ -300,7 +300,6 @@ def models():
             {
                 "id": PUBLIC_MODEL_NAME,
                 "object": "model",
-                "owned_by": "pdf-chat",
             }
         ],
     }
